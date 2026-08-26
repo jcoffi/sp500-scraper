@@ -15,8 +15,18 @@ parquet_path <- file.path("ishares/sp500/parquet", paste0(date_string, ".parquet
 csv_path <- file.path("ishares/sp500/csv", paste0(date_string, ".csv"))
 
 url <- paste0("https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf/1467271812596.ajax?tab=all&fileType=json")
-result <- httr::GET(url)
-json_content <- content(result)
+result <- httr::GET(url,
+  httr::user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"),
+  httr::add_headers(
+    Accept = "application/json, text/javascript, */*; q=0.01",
+    `Accept-Language` = "en-US,en;q=0.9",
+    Referer = "https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf"
+  )
+)
+if (httr::http_type(result) != "application/json") {
+  stop(paste0("Expected JSON response but got: ", httr::http_type(result), ". The iShares endpoint may have changed."))
+}
+json_content <- httr::content(result, as = "parsed", type = "application/json", encoding = "UTF-8")
 df_content <- setDF(rbindlist(json_content$aaData))
 
 if(nrow(df_content) < 300) {stop(paste0("Number of rows less than 300 on date ", date_string, ". Perhaps the script is broken?"))}
